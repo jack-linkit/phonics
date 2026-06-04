@@ -67,8 +67,32 @@
               </div>
 
               <div>
-                <label for="audio" class="mb-3 block text-base font-bold">Student Audio</label>
-                <input id="audio" name="audio" type="file" accept="audio/*,.wav" required class="block w-full cursor-pointer rounded-2xl border-2 border-dashed border-[#C3E3F0] bg-[#C3E3F0]/25 px-4 py-3 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-[#1E1E54] file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-white hover:border-[#E73A46] focus:outline-none focus:ring-4 focus:ring-[#E73A46]/20">
+                <p class="mb-3 block text-base font-bold">Student Audio</p>
+                <div class="mb-4 flex flex-wrap gap-4 text-sm font-bold">
+                  <label class="inline-flex items-center gap-2">
+                    <input type="radio" name="audio_source" value="upload" checked class="h-4 w-4 accent-[#E73A46]">
+                    Upload file
+                  </label>
+                  <label class="inline-flex items-center gap-2">
+                    <input type="radio" name="audio_source" value="record" class="h-4 w-4 accent-[#E73A46]">
+                    Record audio
+                  </label>
+                </div>
+
+                <div id="upload-panel" class="rounded-2xl border-2 border-dashed border-[#C3E3F0] bg-[#C3E3F0]/25 p-4">
+                  <label for="audio" class="mb-2 block text-sm font-bold">Upload Audio File</label>
+                  <input id="audio" name="audio" type="file" accept="audio/*,.wav" class="block w-full cursor-pointer text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-[#1E1E54] file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-white focus:outline-none">
+                </div>
+
+                <div id="record-panel" class="hidden rounded-2xl border-2 border-[#C3E3F0] bg-[#C3E3F0]/25 p-4">
+                  <div class="flex flex-wrap items-center gap-3">
+                    <button id="start-recording-button" type="button" class="rounded-xl bg-[#1E1E54] px-4 py-2 text-sm font-bold text-white shadow-lg shadow-[#1E1E54]/20 transition hover:bg-[#15153f] focus:outline-none focus:ring-4 focus:ring-[#1E1E54]/30">Start Recording</button>
+                    <button id="stop-recording-button" type="button" disabled class="rounded-xl bg-[#E73A46] px-4 py-2 text-sm font-bold text-white shadow-lg shadow-[#E73A46]/25 transition hover:bg-[#cf2935] focus:outline-none focus:ring-4 focus:ring-[#E73A46]/30 disabled:cursor-not-allowed disabled:opacity-50">Stop</button>
+                    <span id="recording-timer" class="text-sm font-bold text-[#1E1E54]/75">00:00 / 01:00</span>
+                  </div>
+                  <p id="recording-status" class="mt-3 text-sm text-[#1E1E54]/70">No recording yet.</p>
+                  <audio id="recording-preview" controls class="mt-4 hidden w-full"></audio>
+                </div>
               </div>
 
               <button id="submit-button" type="submit" class="w-28 rounded-xl bg-[#E73A46] px-4 py-2 text-sm font-bold text-white shadow-lg shadow-[#E73A46]/25 transition hover:bg-[#cf2935] focus:outline-none focus:ring-4 focus:ring-[#E73A46]/30 disabled:cursor-not-allowed disabled:opacity-50">Submit</button>
@@ -120,9 +144,45 @@
       const highlightedText = document.getElementById("highlighted-text");
       const fullAudioPanel = document.getElementById("full-audio-panel");
       const fullAudio = document.getElementById("full-audio");
+      const audioSourceInputs = document.querySelectorAll('input[name="audio_source"]');
+      const uploadPanel = document.getElementById("upload-panel");
+      const recordPanel = document.getElementById("record-panel");
+      const startRecordingButton = document.getElementById("start-recording-button");
+      const stopRecordingButton = document.getElementById("stop-recording-button");
+      const recordingTimer = document.getElementById("recording-timer");
+      const recordingStatus = document.getElementById("recording-status");
+      const recordingPreview = document.getElementById("recording-preview");
       let playbackAudio = null;
       let playbackUrl = null;
       let playbackTimer = null;
+      let mediaRecorder = null;
+      let recordingStream = null;
+      let recordingChunks = [];
+      let recordingInterval = null;
+      let recordingTimeout = null;
+      let recordingStartedAt = 0;
+      let recordedAudioFile = null;
+      let recordedAudioUrl = null;
+
+      function formatSeconds(value) {
+        const totalSeconds = Math.max(Math.floor(value), 0);
+        const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+        const seconds = String(totalSeconds % 60).padStart(2, "0");
+        return `${minutes}:${seconds}`;
+      }
+
+      function getTimeLimitSeconds() {
+        const parsed = Number(form.elements.time_limit_seconds.value);
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : 60;
+      }
+
+      function updateRecordingTimer(elapsedSeconds = 0) {
+        recordingTimer.textContent = `${formatSeconds(elapsedSeconds)} / ${formatSeconds(getTimeLimitSeconds())}`;
+      }
+
+      function getSelectedAudioSource() {
+        return form.elements.audio_source.value;
+      }
 
       function showLoadingState() {
         statusPanel.className = "mb-5 rounded-2xl bg-[#C3E3F0]/25 p-5 text-sm font-bold text-[#1E1E54] ring-1 ring-[#1E1E54]/10";
@@ -139,9 +199,7 @@
         highlightedText.innerHTML = "";
       }
 
-      function preparePlaybackAudio() {
-        const audioFile = form.elements.audio.files[0];
-
+      function preparePlaybackAudio(audioFile) {
         if (!audioFile) {
           playbackAudio = null;
           fullAudio.removeAttribute("src");
@@ -156,6 +214,111 @@
         playbackUrl = URL.createObjectURL(audioFile);
         fullAudio.src = playbackUrl;
         playbackAudio = new Audio(playbackUrl);
+      }
+
+      function setAudioSourceMode() {
+        const source = getSelectedAudioSource();
+        const isUpload = source === "upload";
+
+        uploadPanel.classList.toggle("hidden", !isUpload);
+        recordPanel.classList.toggle("hidden", isUpload);
+      }
+
+      function clearRecordingTimers() {
+        if (recordingInterval) {
+          window.clearInterval(recordingInterval);
+          recordingInterval = null;
+        }
+
+        if (recordingTimeout) {
+          window.clearTimeout(recordingTimeout);
+          recordingTimeout = null;
+        }
+      }
+
+      function stopRecording() {
+        clearRecordingTimers();
+
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+          mediaRecorder.stop();
+        }
+
+        if (recordingStream) {
+          recordingStream.getTracks().forEach((track) => track.stop());
+          recordingStream = null;
+        }
+
+        startRecordingButton.disabled = false;
+        stopRecordingButton.disabled = true;
+      }
+
+      async function startRecording() {
+        if (!navigator.mediaDevices || !window.MediaRecorder) {
+          showErrorState("Browser recording is not supported in this browser. Please upload an audio file instead.");
+          return;
+        }
+
+        stopPlayback();
+        fullAudio.pause();
+        recordingChunks = [];
+        recordedAudioFile = null;
+        recordingPreview.classList.add("hidden");
+        recordingStatus.textContent = "Requesting microphone access...";
+
+        try {
+          recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "";
+          mediaRecorder = new MediaRecorder(
+            recordingStream,
+            mimeType ? { mimeType } : undefined,
+          );
+
+          mediaRecorder.addEventListener("dataavailable", (event) => {
+            if (event.data.size > 0) {
+              recordingChunks.push(event.data);
+            }
+          });
+
+          mediaRecorder.addEventListener("stop", () => {
+            const type = mediaRecorder.mimeType || "audio/webm";
+            const blob = new Blob(recordingChunks, { type });
+
+            if (recordedAudioUrl) {
+              URL.revokeObjectURL(recordedAudioUrl);
+            }
+
+            recordedAudioUrl = URL.createObjectURL(blob);
+            recordedAudioFile = new File([blob], "recording.webm", { type });
+            recordingPreview.src = recordedAudioUrl;
+            recordingPreview.classList.remove("hidden");
+            recordingStatus.textContent = "Recording ready. Click Submit to assess it.";
+          });
+
+          mediaRecorder.start();
+          recordingStartedAt = Date.now();
+          recordingStatus.textContent = "Recording...";
+          startRecordingButton.disabled = true;
+          stopRecordingButton.disabled = false;
+          updateRecordingTimer(0);
+
+          recordingInterval = window.setInterval(() => {
+            updateRecordingTimer((Date.now() - recordingStartedAt) / 1000);
+          }, 250);
+          recordingTimeout = window.setTimeout(() => {
+            stopRecording();
+          }, getTimeLimitSeconds() * 1000);
+        } catch (error) {
+          showErrorState(`Unable to start recording: ${error}`);
+          stopRecording();
+        }
+      }
+
+      function getSelectedAudioFile() {
+        if (getSelectedAudioSource() === "record") {
+          return recordedAudioFile;
+        }
+
+        return form.elements.audio.files[0] || null;
       }
 
       function stopPlayback() {
@@ -236,15 +399,31 @@
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
 
+        const selectedAudioFile = getSelectedAudioFile();
+
+        if (!selectedAudioFile) {
+          const source = getSelectedAudioSource();
+          const message = source === "record"
+            ? "Please record audio before submitting."
+            : "Please choose an audio file before submitting.";
+
+          output.textContent = message;
+          showErrorState(message);
+          return;
+        }
+
         output.textContent = "Submitting...";
         highlightPanel.classList.add("hidden");
         fullAudioPanel.classList.add("hidden");
         highlightedText.innerHTML = "";
         showLoadingState();
         stopPlayback();
-        preparePlaybackAudio();
+        preparePlaybackAudio(selectedAudioFile);
 
         const formData = new FormData(form);
+        formData.delete("audio");
+        formData.delete("audio_source");
+        formData.set("audio", selectedAudioFile, selectedAudioFile.name);
 
         try {
           const response = await fetch("http://localhost:8000/assess-reading", {
@@ -310,6 +489,24 @@
       fullAudio.addEventListener("play", () => {
         stopPlayback();
       });
+
+      audioSourceInputs.forEach((input) => {
+        input.addEventListener("change", () => {
+          stopRecording();
+          setAudioSourceMode();
+        });
+      });
+
+      form.elements.time_limit_seconds.addEventListener("input", () => {
+        if (!mediaRecorder || mediaRecorder.state === "inactive") {
+          updateRecordingTimer(0);
+        }
+      });
+
+      startRecordingButton.addEventListener("click", startRecording);
+      stopRecordingButton.addEventListener("click", stopRecording);
+      setAudioSourceMode();
+      updateRecordingTimer(0);
     </script>
   </body>
 </html>

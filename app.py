@@ -18,6 +18,7 @@ Call:
 
 import json
 import os
+import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -288,6 +289,41 @@ def persist_raw_alignment(
     return str(output_path)
 
 
+def convert_to_wav_if_needed(input_path: str, suffix: str) -> str:
+    if suffix.lower() == ".wav":
+        return input_path
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+        output_path = tmp.name
+
+    try:
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                input_path,
+                "-ac",
+                "1",
+                "-ar",
+                "16000",
+                output_path,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        try:
+            os.remove(output_path)
+        except OSError:
+            pass
+        detail = exc.stderr.strip() or exc.stdout.strip() or str(exc)
+        raise RuntimeError(f"ffmpeg audio conversion failed: {detail}") from exc
+
+    return output_path
+
+
 @app.post("/assess-reading", response_model=AssessmentResponse)
 async def assess_reading(
     student_id: str = Form(...),
@@ -310,10 +346,12 @@ async def assess_reading(
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(await audio.read())
         tmp_path = tmp.name
+    audio_path = tmp_path
 
     try:
+        audio_path = convert_to_wav_if_needed(tmp_path, suffix)
         raw = assess_with_azure(
-            audio_path=tmp_path,
+            audio_path=audio_path,
             reference_text=reference_text,
             config=AzureConfig(key=key, region=region),
         )
@@ -357,3 +395,8 @@ async def assess_reading(
             os.remove(tmp_path)
         except OSError:
             pass
+        if audio_path != tmp_path:
+            try:
+                os.remove(audio_path)
+            except OSError:
+                pass
