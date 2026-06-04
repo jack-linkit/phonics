@@ -84,6 +84,8 @@
               </div>
             </div>
 
+            <div id="status-panel" class="mb-5 hidden rounded-2xl p-5 text-sm font-bold ring-1"></div>
+
             <div id="highlight-panel" class="mb-5 hidden rounded-2xl bg-[#C3E3F0]/25 p-5 ring-1 ring-[#1E1E54]/10">
               <div class="mb-4">
                 <div>
@@ -113,6 +115,7 @@
       const form = document.getElementById("assessment-form");
       const output = document.getElementById("output");
       const submitButton = document.getElementById("submit-button");
+      const statusPanel = document.getElementById("status-panel");
       const highlightPanel = document.getElementById("highlight-panel");
       const highlightedText = document.getElementById("highlighted-text");
       const fullAudioPanel = document.getElementById("full-audio-panel");
@@ -120,6 +123,21 @@
       let playbackAudio = null;
       let playbackUrl = null;
       let playbackTimer = null;
+
+      function showLoadingState() {
+        statusPanel.className = "mb-5 rounded-2xl bg-[#C3E3F0]/25 p-5 text-sm font-bold text-[#1E1E54] ring-1 ring-[#1E1E54]/10";
+        statusPanel.innerHTML = '<span class="inline-flex items-center gap-3"><span class="h-4 w-4 animate-spin rounded-full border-2 border-[#1E1E54]/25 border-t-[#E73A46]"></span>Analyzing recording...</span>';
+        submitButton.disabled = true;
+        submitButton.textContent = "Submitting...";
+      }
+
+      function showErrorState(message) {
+        statusPanel.className = "mb-5 rounded-2xl bg-red-50 p-5 text-sm font-bold text-red-800 ring-1 ring-red-200";
+        statusPanel.textContent = message;
+        highlightPanel.classList.add("hidden");
+        fullAudioPanel.classList.add("hidden");
+        highlightedText.innerHTML = "";
+      }
 
       function preparePlaybackAudio() {
         const audioFile = form.elements.audio.files[0];
@@ -137,7 +155,6 @@
 
         playbackUrl = URL.createObjectURL(audioFile);
         fullAudio.src = playbackUrl;
-        fullAudioPanel.classList.remove("hidden");
         playbackAudio = new Audio(playbackUrl);
       }
 
@@ -223,7 +240,7 @@
         highlightPanel.classList.add("hidden");
         fullAudioPanel.classList.add("hidden");
         highlightedText.innerHTML = "";
-        submitButton.disabled = true;
+        showLoadingState();
         stopPlayback();
         preparePlaybackAudio();
 
@@ -237,9 +254,24 @@
 
           const text = await response.text();
 
+          if (!response.ok) {
+            let message = text;
+
+            try {
+              const errorJson = JSON.parse(text);
+              message = errorJson.detail || JSON.stringify(errorJson, null, 2);
+            } catch {
+            }
+
+            output.textContent = `HTTP ${response.status}\n\n${message}`;
+            showErrorState(`Assessment failed: ${message}`);
+            return;
+          }
+
           try {
             const json = JSON.parse(text);
             renderHighlightedText(json.expected_word_results);
+            fullAudioPanel.classList.remove("hidden");
 
             const summary = [
               `Raw alignment saved to: ${json.raw_alignment_path || "not saved"}`,
@@ -261,14 +293,17 @@
           } catch {
             output.textContent = text;
           }
-
-          if (!response.ok) {
-            output.textContent = `HTTP ${response.status}\n\n${output.textContent}`;
-          }
         } catch (error) {
-          output.textContent = String(error);
+          const message = String(error);
+          output.textContent = message;
+          showErrorState(`Assessment failed: ${message}`);
         } finally {
+          if (statusPanel.textContent === "" || statusPanel.textContent.startsWith("Analyzing")) {
+            statusPanel.classList.add("hidden");
+          }
+
           submitButton.disabled = false;
+          submitButton.textContent = "Submit";
         }
       });
 
