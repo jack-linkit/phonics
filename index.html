@@ -1,128 +1,145 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>Oral Reading Assessment Test</title>
-  <style>
-    body {
-      font-family: system-ui, sans-serif;
-      max-width: 800px;
-      margin: 40px auto;
-      line-height: 1.4;
-    }
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Oral Reading Assessment Test</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Roboto', 'sans-serif'],
+            },
+            colors: {
+              linkit: {
+                navy: '#1E1E54',
+                red: '#E73A46',
+                cream: '#FEEEB5',
+                blue: '#C3E3F0',
+              },
+            },
+          },
+        },
+      }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="min-h-screen bg-[#1E1E54] font-sans text-[#1E1E54]">
+    <main class="min-h-screen bg-[radial-gradient(circle_at_top_left,#C3E3F0_0,transparent_30%),radial-gradient(circle_at_bottom_right,#FEEEB5_0,transparent_28%)] px-4 py-10 sm:px-6 lg:px-8">
+      <section class="mx-auto max-w-7xl">
+        <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p class="mb-3 inline-flex rounded-full bg-[#FEEEB5] px-4 py-1 text-sm font-bold uppercase tracking-[0.25em] text-[#1E1E54] ring-1 ring-[#1E1E54]/15">Reading Assessment</p>
+            <p class="mt-3 max-w-2xl text-base leading-7 text-white/80">Upload student audio, submit it to Azure Pronunciation Assessment, and review the saved raw alignment plus parsed reading metrics.</p>
+          </div>
+        </div>
 
-    label {
-      display: block;
-      margin-top: 16px;
-      font-weight: 600;
-    }
+        <div class="grid gap-6 lg:grid-cols-[minmax(0,34rem)_minmax(0,1fr)] lg:items-start">
+          <section class="rounded-3xl bg-white p-8 shadow-2xl shadow-black/25 ring-2 ring-[#1E1E54]/20">
+            <div class="mb-6 flex items-center gap-3">
+              <span class="flex h-10 w-10 items-center justify-center rounded-full bg-[#E73A46] text-base font-bold text-white">1</span>
+              <h1 class="text-2xl font-bold">Submit Assessment</h1>
+            </div>
 
-    input, textarea, button {
-      width: 100%;
-      box-sizing: border-box;
-      padding: 8px;
-      margin-top: 4px;
-    }
+            <form id="assessment-form" class="space-y-6">
+              <div>
+                <label for="student_id" class="mb-3 block text-base font-bold">Student ID</label>
+                <input id="student_id" name="student_id" value="123" required class="block w-full rounded-2xl border-2 border-[#C3E3F0] bg-[#C3E3F0]/25 px-5 py-3 text-base focus:outline-none focus:ring-4 focus:ring-[#E73A46]/20">
+              </div>
 
-    textarea {
-      min-height: 100px;
-    }
+              <div>
+                <label for="assessment_id" class="mb-3 block text-base font-bold">Assessment ID</label>
+                <input id="assessment_id" name="assessment_id" value="456" required class="block w-full rounded-2xl border-2 border-[#C3E3F0] bg-[#C3E3F0]/25 px-5 py-3 text-base focus:outline-none focus:ring-4 focus:ring-[#E73A46]/20">
+              </div>
 
-    button {
-      margin-top: 20px;
-      cursor: pointer;
-    }
+              <div>
+                <label for="reference_text" class="mb-3 block text-base font-bold">Reference Text</label>
+                <textarea id="reference_text" name="reference_text" required class="block min-h-32 w-full rounded-2xl border-2 border-[#C3E3F0] bg-[#C3E3F0]/25 px-5 py-4 text-base focus:outline-none focus:ring-4 focus:ring-[#E73A46]/20">The dog ran fast down the hill.</textarea>
+              </div>
 
-    pre {
-      background: #111;
-      color: #eee;
-      padding: 16px;
-      overflow: auto;
-      white-space: pre-wrap;
-    }
-  </style>
-</head>
-<body>
-  <h1>Oral Reading Assessment Test</h1>
+              <div>
+                <label for="time_limit_seconds" class="mb-3 block text-base font-bold">Time Limit Seconds</label>
+                <input id="time_limit_seconds" name="time_limit_seconds" type="number" value="60" class="block w-full rounded-2xl border-2 border-[#C3E3F0] bg-[#C3E3F0]/25 px-5 py-3 text-base focus:outline-none focus:ring-4 focus:ring-[#E73A46]/20">
+              </div>
 
-  <form id="assessment-form">
-    <label>
-      Student ID
-      <input name="student_id" value="123" required />
-    </label>
+              <div>
+                <label for="audio" class="mb-3 block text-base font-bold">Student Audio</label>
+                <input id="audio" name="audio" type="file" accept="audio/*,.wav" required class="block w-full cursor-pointer rounded-2xl border-2 border-dashed border-[#C3E3F0] bg-[#C3E3F0]/25 px-5 py-4 text-base file:mr-4 file:rounded-xl file:border-0 file:bg-[#1E1E54] file:px-5 file:py-2 file:text-base file:font-bold file:text-white hover:border-[#E73A46] focus:outline-none focus:ring-4 focus:ring-[#E73A46]/20">
+              </div>
 
-    <label>
-      Assessment ID
-      <input name="assessment_id" value="456" required />
-    </label>
+              <button id="submit-button" type="submit" class="w-48 rounded-xl bg-[#E73A46] px-5 py-3 text-base font-bold text-white shadow-lg shadow-[#E73A46]/25 transition hover:bg-[#cf2935] focus:outline-none focus:ring-4 focus:ring-[#E73A46]/30 disabled:cursor-not-allowed disabled:opacity-50">Submit Assessment</button>
+            </form>
+          </section>
 
-    <label>
-      Reference Text
-      <textarea name="reference_text" required>The dog ran fast down the hill.</textarea>
-    </label>
+          <section class="rounded-3xl bg-white p-6 shadow-2xl shadow-black/25 ring-2 ring-[#1E1E54]/20">
+            <div class="mb-5 flex items-center gap-3">
+              <span class="flex h-10 w-10 items-center justify-center rounded-full bg-[#E73A46] text-base font-bold text-white">2</span>
+              <div>
+                <h2 class="text-2xl font-bold">Assessment Output</h2>
+                <p class="mt-1 text-sm text-[#1E1E54]/70">Raw alignment persistence, metrics, word-level alignment, and the full API response.</p>
+              </div>
+            </div>
 
-    <label>
-      Time Limit Seconds
-      <input name="time_limit_seconds" type="number" value="60" />
-    </label>
+            <pre id="output" class="max-h-[42rem] overflow-auto rounded-2xl bg-[#1E1E54] p-5 text-sm leading-6 text-white shadow-inner whitespace-pre-wrap">No response yet.</pre>
+          </section>
+        </div>
+      </section>
+    </main>
 
-    <label>
-      Student Audio
-      <input name="audio" type="file" accept="audio/*,.wav" required />
-    </label>
+    <script>
+      const form = document.getElementById("assessment-form");
+      const output = document.getElementById("output");
+      const submitButton = document.getElementById("submit-button");
 
-    <button type="submit">Submit Assessment</button>
-  </form>
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
 
-  <h2>Response</h2>
-  <pre id="output">No response yet.</pre>
+        output.textContent = "Submitting...";
+        submitButton.disabled = true;
 
-  <script>
-    const form = document.getElementById("assessment-form");
-    const output = document.getElementById("output");
-
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-
-      output.textContent = "Submitting...";
-
-      const formData = new FormData(form);
-
-      try {
-        const response = await fetch("http://localhost:8000/assess-reading", {
-          method: "POST",
-          body: formData
-        });
-
-        const text = await response.text();
+        const formData = new FormData(form);
 
         try {
-          const json = JSON.parse(text);
-          const summary = [
-            `Raw alignment saved to: ${json.raw_alignment_path || "not saved"}`,
-            "",
-            "Derived metrics:",
-            JSON.stringify(json.derived_metrics || {}, null, 2),
-            "",
-            "Word alignment:",
-            JSON.stringify(json.words || [], null, 2),
-            "",
-            "Full API response:",
-            JSON.stringify(json, null, 2)
-          ];
+          const response = await fetch("http://localhost:8000/assess-reading", {
+            method: "POST",
+            body: formData
+          });
 
-          output.textContent = summary.join("\n");
-        } catch {
-          output.textContent = text;
-        }
+          const text = await response.text();
 
-        if (!response.ok) {
-          output.textContent = `HTTP ${response.status}\n\n${output.textContent}`;
+          try {
+            const json = JSON.parse(text);
+            const summary = [
+              `Raw alignment saved to: ${json.raw_alignment_path || "not saved"}`,
+              "",
+              "Derived metrics:",
+              JSON.stringify(json.derived_metrics || {}, null, 2),
+              "",
+              "Word alignment:",
+              JSON.stringify(json.words || [], null, 2),
+              "",
+              "Full API response:",
+              JSON.stringify(json, null, 2)
+            ];
+
+            output.textContent = summary.join("\n");
+          } catch {
+            output.textContent = text;
+          }
+
+          if (!response.ok) {
+            output.textContent = `HTTP ${response.status}\n\n${output.textContent}`;
+          }
+        } catch (error) {
+          output.textContent = String(error);
+        } finally {
+          submitButton.disabled = false;
         }
-      } catch (error) {
-        output.textContent = String(error);
-      }
-    });
-  </script>
-</body>
+      });
+    </script>
+  </body>
 </html>
