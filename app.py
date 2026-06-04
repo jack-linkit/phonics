@@ -26,6 +26,7 @@ from typing import Any
 
 import azure.cognitiveservices.speech as speechsdk
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -39,6 +40,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/", response_class=FileResponse)
+async def index():
+    return FileResponse("index.html")
 
 
 class WordMetric(BaseModel):

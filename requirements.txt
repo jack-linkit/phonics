@@ -1,0 +1,4 @@
+azure-cognitiveservices-speech
+fastapi
+python-multipart
+uvicorn[standard]
