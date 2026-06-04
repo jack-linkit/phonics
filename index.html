@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Oral Reading Assessment Test</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      line-height: 1.4;
+    }
+
+    label {
+      display: block;
+      margin-top: 16px;
+      font-weight: 600;
+    }
+
+    input, textarea, button {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px;
+      margin-top: 4px;
+    }
+
+    textarea {
+      min-height: 100px;
+    }
+
+    button {
+      margin-top: 20px;
+      cursor: pointer;
+    }
+
+    pre {
+      background: #111;
+      color: #eee;
+      padding: 16px;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>Oral Reading Assessment Test</h1>
+
+  <form id="assessment-form">
+    <label>
+      Student ID
+      <input name="student_id" value="123" required />
+    </label>
+
+    <label>
+      Assessment ID
+      <input name="assessment_id" value="456" required />
+    </label>
+
+    <label>
+      Reference Text
+      <textarea name="reference_text" required>The dog ran fast down the hill.</textarea>
+    </label>
+
+    <label>
+      Time Limit Seconds
+      <input name="time_limit_seconds" type="number" value="60" />
+    </label>
+
+    <label>
+      Student Audio
+      <input name="audio" type="file" accept="audio/*,.wav" required />
+    </label>
+
+    <button type="submit">Submit Assessment</button>
+  </form>
+
+  <h2>Response</h2>
+  <pre id="output">No response yet.</pre>
+
+  <script>
+    const form = document.getElementById("assessment-form");
+    const output = document.getElementById("output");
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      output.textContent = "Submitting...";
+
+      const formData = new FormData(form);
+
+      try {
+        const response = await fetch("http://localhost:8000/assess-reading", {
+          method: "POST",
+          body: formData
+        });
+
+        const text = await response.text();
+
+        try {
+          const json = JSON.parse(text);
+          const summary = [
+            `Raw alignment saved to: ${json.raw_alignment_path || "not saved"}`,
+            "",
+            "Derived metrics:",
+            JSON.stringify(json.derived_metrics || {}, null, 2),
+            "",
+            "Word alignment:",
+            JSON.stringify(json.words || [], null, 2),
+            "",
+            "Full API response:",
+            JSON.stringify(json, null, 2)
+          ];
+
+          output.textContent = summary.join("\n");
+        } catch {
+          output.textContent = text;
+        }
+
+        if (!response.ok) {
+          output.textContent = `HTTP ${response.status}\n\n${output.textContent}`;
+        }
+      } catch (error) {
+        output.textContent = String(error);
+      }
+    });
+  </script>
+</body>
+</html>
