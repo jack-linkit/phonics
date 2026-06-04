@@ -90,15 +90,18 @@
                   <h3 class="text-lg font-bold">Expected Text Highlight</h3>
                   <p class="mt-1 text-sm text-[#1E1E54]/70">Green words were read correctly. Red words need attention.</p>
                 </div>
-                <div class="flex flex-wrap gap-2 text-xs font-bold">
-                  <span class="rounded-full bg-green-100 px-3 py-1 text-green-800 ring-1 ring-green-300">Correct</span>
-                  <span class="rounded-full bg-red-100 px-3 py-1 text-red-800 ring-1 ring-red-300">Incorrect</span>
+                <div class="flex flex-wrap gap-3 text-xs font-bold">
+                  <span class="text-green-700">Correct</span>
+                  <span class="text-red-700">Incorrect</span>
                 </div>
               </div>
-              <div id="highlighted-text" class="flex flex-wrap gap-2"></div>
+              <p id="highlighted-text" class="text-xl font-bold leading-9"></p>
             </div>
 
-            <pre id="output" class="max-h-[42rem] overflow-auto rounded-2xl bg-[#1E1E54] p-5 text-sm leading-6 text-white shadow-inner whitespace-pre-wrap">No response yet.</pre>
+            <details class="rounded-2xl bg-[#1E1E54] text-white shadow-inner">
+              <summary class="cursor-pointer px-5 py-4 text-sm font-bold">Full API Response</summary>
+              <pre id="output" class="max-h-[42rem] overflow-auto border-t border-white/10 p-5 text-sm leading-6 whitespace-pre-wrap">No response yet.</pre>
+            </details>
           </section>
         </div>
       </section>
@@ -122,20 +125,19 @@
         results.forEach((item) => {
           const resultType = item.result_type || "Correct";
           const isCorrect = resultType === "Correct" || resultType === "None";
-          const chip = document.createElement("span");
+          const word = document.createElement("span");
 
-          chip.textContent = item.expected_word;
-          chip.title = [
+          word.textContent = item.expected_word;
+          word.title = [
             `Expected: ${item.expected_word}`,
             `Spoken: ${item.spoken_word || "not spoken"}`,
             `Result: ${resultType}`,
             `Accuracy: ${item.accuracy_score ?? "n/a"}`
           ].join("\n");
-          chip.className = isCorrect
-            ? "inline-flex rounded-xl bg-green-100 px-3 py-2 text-base font-bold text-green-800 ring-1 ring-green-300"
-            : "inline-flex rounded-xl bg-red-100 px-3 py-2 text-base font-bold text-red-800 ring-1 ring-red-300";
+          word.className = isCorrect ? "text-green-700" : "text-red-700";
 
-          highlightedText.appendChild(chip);
+          highlightedText.appendChild(word);
+          highlightedText.appendChild(document.createTextNode(" "));
         });
 
         highlightPanel.classList.remove("hidden");
