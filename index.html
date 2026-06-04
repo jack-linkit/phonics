@@ -84,6 +84,20 @@
               </div>
             </div>
 
+            <div id="highlight-panel" class="mb-5 hidden rounded-2xl bg-[#C3E3F0]/25 p-5 ring-1 ring-[#1E1E54]/10">
+              <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 class="text-lg font-bold">Expected Text Highlight</h3>
+                  <p class="mt-1 text-sm text-[#1E1E54]/70">Green words were read correctly. Red words need attention.</p>
+                </div>
+                <div class="flex flex-wrap gap-2 text-xs font-bold">
+                  <span class="rounded-full bg-green-100 px-3 py-1 text-green-800 ring-1 ring-green-300">Correct</span>
+                  <span class="rounded-full bg-red-100 px-3 py-1 text-red-800 ring-1 ring-red-300">Incorrect</span>
+                </div>
+              </div>
+              <div id="highlighted-text" class="flex flex-wrap gap-2"></div>
+            </div>
+
             <pre id="output" class="max-h-[42rem] overflow-auto rounded-2xl bg-[#1E1E54] p-5 text-sm leading-6 text-white shadow-inner whitespace-pre-wrap">No response yet.</pre>
           </section>
         </div>
@@ -94,11 +108,45 @@
       const form = document.getElementById("assessment-form");
       const output = document.getElementById("output");
       const submitButton = document.getElementById("submit-button");
+      const highlightPanel = document.getElementById("highlight-panel");
+      const highlightedText = document.getElementById("highlighted-text");
+
+      function renderHighlightedText(results) {
+        highlightedText.innerHTML = "";
+
+        if (!Array.isArray(results) || results.length === 0) {
+          highlightPanel.classList.add("hidden");
+          return;
+        }
+
+        results.forEach((item) => {
+          const resultType = item.result_type || "Correct";
+          const isCorrect = resultType === "Correct" || resultType === "None";
+          const chip = document.createElement("span");
+
+          chip.textContent = item.expected_word;
+          chip.title = [
+            `Expected: ${item.expected_word}`,
+            `Spoken: ${item.spoken_word || "not spoken"}`,
+            `Result: ${resultType}`,
+            `Accuracy: ${item.accuracy_score ?? "n/a"}`
+          ].join("\n");
+          chip.className = isCorrect
+            ? "inline-flex rounded-xl bg-green-100 px-3 py-2 text-base font-bold text-green-800 ring-1 ring-green-300"
+            : "inline-flex rounded-xl bg-red-100 px-3 py-2 text-base font-bold text-red-800 ring-1 ring-red-300";
+
+          highlightedText.appendChild(chip);
+        });
+
+        highlightPanel.classList.remove("hidden");
+      }
 
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
 
         output.textContent = "Submitting...";
+        highlightPanel.classList.add("hidden");
+        highlightedText.innerHTML = "";
         submitButton.disabled = true;
 
         const formData = new FormData(form);
@@ -113,11 +161,16 @@
 
           try {
             const json = JSON.parse(text);
+            renderHighlightedText(json.expected_word_results);
+
             const summary = [
               `Raw alignment saved to: ${json.raw_alignment_path || "not saved"}`,
               "",
               "Derived metrics:",
               JSON.stringify(json.derived_metrics || {}, null, 2),
+              "",
+              "Expected word results:",
+              JSON.stringify(json.expected_word_results || [], null, 2),
               "",
               "Word alignment:",
               JSON.stringify(json.words || [], null, 2),

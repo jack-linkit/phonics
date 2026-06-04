@@ -48,6 +48,15 @@ class WordMetric(BaseModel):
     error_type: str | None = None
 
 
+class ExpectedWordResult(BaseModel):
+    expected_word: str
+    spoken_word: str | None = None
+    result_type: str
+    accuracy_score: float | None = None
+    offset_seconds: float | None = None
+    duration_seconds: float | None = None
+
+
 class DerivedMetrics(BaseModel):
     words_read: int
     words_correct: int
@@ -66,6 +75,7 @@ class AssessmentResponse(BaseModel):
     raw_alignment_path: str
     provider_scores: dict[str, Any]
     derived_metrics: DerivedMetrics
+    expected_word_results: list[ExpectedWordResult]
     words: list[WordMetric]
     raw_provider_payload: dict[str, Any]
 
@@ -114,6 +124,42 @@ def extract_words(raw: dict[str, Any]) -> list[WordMetric]:
         )
 
     return parsed
+
+
+def build_expected_word_results(
+    reference_text: str,
+    words: list[WordMetric],
+) -> list[ExpectedWordResult]:
+    aligned_words = [word for word in words if word.error_type != "Insertion"]
+    results: list[ExpectedWordResult] = []
+
+    for index, expected_word in enumerate(reference_text.split()):
+        aligned_word = aligned_words[index] if index < len(aligned_words) else None
+
+        if aligned_word is None:
+            results.append(
+                ExpectedWordResult(
+                    expected_word=expected_word,
+                    result_type="Missing",
+                )
+            )
+            continue
+
+        error_type = aligned_word.error_type or "Correct"
+        spoken_word = None if error_type == "Omission" else aligned_word.word
+
+        results.append(
+            ExpectedWordResult(
+                expected_word=expected_word,
+                spoken_word=spoken_word,
+                result_type=error_type,
+                accuracy_score=aligned_word.accuracy_score,
+                offset_seconds=aligned_word.offset_seconds,
+                duration_seconds=aligned_word.duration_seconds,
+            )
+        )
+
+    return results
 
 
 def derive_metrics(
@@ -278,6 +324,10 @@ async def assess_reading(
         )
 
         words = extract_words(raw)
+        expected_word_results = build_expected_word_results(
+            reference_text=reference_text,
+            words=words,
+        )
         metrics = derive_metrics(
             words=words,
             reference_text=reference_text,
@@ -294,6 +344,7 @@ async def assess_reading(
             raw_alignment_path=raw_alignment_path,
             provider_scores=provider_scores,
             derived_metrics=metrics,
+            expected_word_results=expected_word_results,
             words=words,
             raw_provider_payload=raw,
         )
