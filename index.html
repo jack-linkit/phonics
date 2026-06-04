@@ -68,10 +68,10 @@
 
               <div>
                 <label for="audio" class="mb-3 block text-base font-bold">Student Audio</label>
-                <input id="audio" name="audio" type="file" accept="audio/*,.wav" required class="block w-full cursor-pointer rounded-2xl border-2 border-dashed border-[#C3E3F0] bg-[#C3E3F0]/25 px-5 py-4 text-base file:mr-4 file:rounded-xl file:border-0 file:bg-[#1E1E54] file:px-5 file:py-2 file:text-base file:font-bold file:text-white hover:border-[#E73A46] focus:outline-none focus:ring-4 focus:ring-[#E73A46]/20">
+                <input id="audio" name="audio" type="file" accept="audio/*,.wav" required class="block w-full cursor-pointer rounded-2xl border-2 border-dashed border-[#C3E3F0] bg-[#C3E3F0]/25 px-4 py-3 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-[#1E1E54] file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-white hover:border-[#E73A46] focus:outline-none focus:ring-4 focus:ring-[#E73A46]/20">
               </div>
 
-              <button id="submit-button" type="submit" class="w-48 rounded-xl bg-[#E73A46] px-5 py-3 text-base font-bold text-white shadow-lg shadow-[#E73A46]/25 transition hover:bg-[#cf2935] focus:outline-none focus:ring-4 focus:ring-[#E73A46]/30 disabled:cursor-not-allowed disabled:opacity-50">Submit Assessment</button>
+              <button id="submit-button" type="submit" class="w-28 rounded-xl bg-[#E73A46] px-4 py-2 text-sm font-bold text-white shadow-lg shadow-[#E73A46]/25 transition hover:bg-[#cf2935] focus:outline-none focus:ring-4 focus:ring-[#E73A46]/30 disabled:cursor-not-allowed disabled:opacity-50">Submit</button>
             </form>
           </section>
 
@@ -85,17 +85,19 @@
             </div>
 
             <div id="highlight-panel" class="mb-5 hidden rounded-2xl bg-[#C3E3F0]/25 p-5 ring-1 ring-[#1E1E54]/10">
-              <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div class="mb-4">
                 <div>
                   <h3 class="text-lg font-bold">Expected Text Highlight</h3>
-                  <p class="mt-1 text-sm text-[#1E1E54]/70">Green words were read correctly. Red words need attention.</p>
-                </div>
-                <div class="flex flex-wrap gap-3 text-xs font-bold">
-                  <span class="text-green-700">Correct</span>
-                  <span class="text-red-700">Incorrect</span>
+                  <p class="mt-1 text-sm text-[#1E1E54]/70">Green words were read correctly. Red words need attention. Use play controls to hear each aligned word.</p>
                 </div>
               </div>
-              <p id="highlighted-text" class="text-xl font-bold leading-9"></p>
+              <div id="highlighted-text" class="flex flex-wrap items-start gap-x-5 gap-y-4 text-xl font-bold leading-9"></div>
+            </div>
+
+            <div id="full-audio-panel" class="mb-5 hidden rounded-2xl bg-[#FEEEB5]/60 p-5 ring-1 ring-[#1E1E54]/10">
+              <h3 class="text-lg font-bold">Full Recording</h3>
+              <p class="mt-1 text-sm text-[#1E1E54]/70">Play back the complete uploaded audio recording.</p>
+              <audio id="full-audio" controls class="mt-4 w-full"></audio>
             </div>
 
             <details class="rounded-2xl bg-[#1E1E54] text-white shadow-inner">
@@ -113,6 +115,59 @@
       const submitButton = document.getElementById("submit-button");
       const highlightPanel = document.getElementById("highlight-panel");
       const highlightedText = document.getElementById("highlighted-text");
+      const fullAudioPanel = document.getElementById("full-audio-panel");
+      const fullAudio = document.getElementById("full-audio");
+      let playbackAudio = null;
+      let playbackUrl = null;
+      let playbackTimer = null;
+
+      function preparePlaybackAudio() {
+        const audioFile = form.elements.audio.files[0];
+
+        if (!audioFile) {
+          playbackAudio = null;
+          fullAudio.removeAttribute("src");
+          fullAudioPanel.classList.add("hidden");
+          return;
+        }
+
+        if (playbackUrl) {
+          URL.revokeObjectURL(playbackUrl);
+        }
+
+        playbackUrl = URL.createObjectURL(audioFile);
+        fullAudio.src = playbackUrl;
+        fullAudioPanel.classList.remove("hidden");
+        playbackAudio = new Audio(playbackUrl);
+      }
+
+      function stopPlayback() {
+        if (playbackTimer) {
+          window.clearTimeout(playbackTimer);
+          playbackTimer = null;
+        }
+
+        if (playbackAudio) {
+          playbackAudio.pause();
+        }
+      }
+
+      function playWordRange(offsetSeconds, durationSeconds) {
+        if (!playbackAudio || offsetSeconds == null || durationSeconds == null) {
+          return;
+        }
+
+        stopPlayback();
+        fullAudio.pause();
+
+        playbackAudio.currentTime = offsetSeconds;
+        playbackAudio.play().catch((error) => {
+          output.textContent = `Unable to play audio segment: ${error}\n\n${output.textContent}`;
+        });
+        playbackTimer = window.setTimeout(() => {
+          stopPlayback();
+        }, Math.max(durationSeconds * 1000, 250));
+      }
 
       function renderHighlightedText(results) {
         highlightedText.innerHTML = "";
@@ -125,8 +180,11 @@
         results.forEach((item) => {
           const resultType = item.result_type || "Correct";
           const isCorrect = resultType === "Correct" || resultType === "None";
+          const canPlay = item.offset_seconds != null && item.duration_seconds != null;
+          const wordGroup = document.createElement("span");
           const word = document.createElement("span");
 
+          wordGroup.className = "inline-flex flex-col items-center gap-0.5";
           word.textContent = item.expected_word;
           word.title = [
             `Expected: ${item.expected_word}`,
@@ -136,8 +194,23 @@
           ].join("\n");
           word.className = isCorrect ? "text-green-700" : "text-red-700";
 
-          highlightedText.appendChild(word);
-          highlightedText.appendChild(document.createTextNode(" "));
+          wordGroup.appendChild(word);
+
+          if (canPlay) {
+            const playButton = document.createElement("button");
+            playButton.type = "button";
+            playButton.textContent = "▶";
+            playButton.title = `Play ${item.expected_word}`;
+            playButton.setAttribute("aria-label", `Play ${item.expected_word}`);
+            playButton.className = "text-xs leading-none text-[#1E1E54]/60 transition hover:text-[#E73A46] focus:outline-none focus:ring-2 focus:ring-[#E73A46]/30";
+            playButton.addEventListener("click", () => {
+              playWordRange(item.offset_seconds, item.duration_seconds);
+            });
+
+            wordGroup.appendChild(playButton);
+          }
+
+          highlightedText.appendChild(wordGroup);
         });
 
         highlightPanel.classList.remove("hidden");
@@ -148,8 +221,11 @@
 
         output.textContent = "Submitting...";
         highlightPanel.classList.add("hidden");
+        fullAudioPanel.classList.add("hidden");
         highlightedText.innerHTML = "";
         submitButton.disabled = true;
+        stopPlayback();
+        preparePlaybackAudio();
 
         const formData = new FormData(form);
 
@@ -194,6 +270,10 @@
         } finally {
           submitButton.disabled = false;
         }
+      });
+
+      fullAudio.addEventListener("play", () => {
+        stopPlayback();
       });
     </script>
   </body>
