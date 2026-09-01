@@ -47,18 +47,19 @@
 
             <form id="assessment-form" class="space-y-6">
               <div>
-                <label for="student_id" class="mb-3 block text-base font-bold">Student ID</label>
-                <input id="student_id" name="student_id" value="123" required class="block w-full rounded-2xl border-2 border-[#C3E3F0] bg-[#C3E3F0]/25 px-5 py-3 text-base focus:outline-none focus:ring-4 focus:ring-[#E73A46]/20">
-              </div>
-
-              <div>
-                <label for="assessment_id" class="mb-3 block text-base font-bold">Assessment ID</label>
-                <input id="assessment_id" name="assessment_id" value="456" required class="block w-full rounded-2xl border-2 border-[#C3E3F0] bg-[#C3E3F0]/25 px-5 py-3 text-base focus:outline-none focus:ring-4 focus:ring-[#E73A46]/20">
+                <label for="student_id" class="mb-3 block text-base font-bold">Select Student</label>
+                <select id="student_id" name="student_id" required class="block w-full rounded-2xl border-2 border-[#C3E3F0] bg-[#C3E3F0]/25 px-5 py-3 text-base focus:outline-none focus:ring-4 focus:ring-[#E73A46]/20">
+                  <option value="student-001">Ava Johnson</option>
+                  <option value="student-002">Noah Smith</option>
+                  <option value="student-003">Mia Garcia</option>
+                  <option value="student-004">Liam Brown</option>
+                  <option value="student-005">Sophia Lee</option>
+                </select>
               </div>
 
               <div>
                 <label for="reference_text" class="mb-3 block text-base font-bold">Reference Text</label>
-                <textarea id="reference_text" name="reference_text" required class="block min-h-32 w-full rounded-2xl border-2 border-[#C3E3F0] bg-[#C3E3F0]/25 px-5 py-4 text-base focus:outline-none focus:ring-4 focus:ring-[#E73A46]/20">The dog ran fast down the hill.</textarea>
+                <textarea id="reference_text" name="reference_text" required class="block min-h-32 w-full rounded-2xl border-2 border-[#C3E3F0] bg-[#C3E3F0]/25 px-5 py-4 text-base focus:outline-none focus:ring-4 focus:ring-[#E73A46]/20">He was bitten by a radioactive spider which gave him special powers.</textarea>
               </div>
 
               <div>
@@ -426,7 +427,7 @@
         formData.set("audio", selectedAudioFile, selectedAudioFile.name);
 
         try {
-          const response = await fetch("http://localhost:8000/assess-reading", {
+          const response = await fetch("/assess-reading", {
             method: "POST",
             body: formData
           });

@@ -10,7 +10,6 @@ Run:
 Call:
   curl -X POST http://localhost:8000/assess-reading \
     -F student_id=123 \
-    -F assessment_id=456 \
     -F reference_text="The dog ran fast down the hill." \
     -F time_limit_seconds=60 \
     -F audio=@student.wav
@@ -21,6 +20,7 @@ import os
 import subprocess
 import tempfile
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -77,7 +77,6 @@ class DerivedMetrics(BaseModel):
 
 class AssessmentResponse(BaseModel):
     student_id: str
-    assessment_id: str
     provider: str
     raw_alignment_path: str
     provider_scores: dict[str, Any]
@@ -284,12 +283,12 @@ def assess_with_azure(
 def persist_raw_alignment(
     raw: dict[str, Any],
     student_id: str,
-    assessment_id: str,
 ) -> str:
     output_dir = Path("outputs")
     output_dir.mkdir(exist_ok=True)
 
-    output_path = output_dir / f"{student_id}_{assessment_id}.json"
+    timestamp = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
+    output_path = output_dir / f"{student_id}_{timestamp}.json"
     output_path.write_text(json.dumps(raw, indent=2), encoding="utf-8")
 
     return str(output_path)
@@ -333,7 +332,6 @@ def convert_to_wav_if_needed(input_path: str, suffix: str) -> str:
 @app.post("/assess-reading", response_model=AssessmentResponse)
 async def assess_reading(
     student_id: str = Form(...),
-    assessment_id: str = Form(...),
     reference_text: str = Form(...),
     time_limit_seconds: int | None = Form(None),
     audio: UploadFile = File(...),
@@ -364,7 +362,6 @@ async def assess_reading(
         raw_alignment_path = persist_raw_alignment(
             raw=raw,
             student_id=student_id,
-            assessment_id=assessment_id,
         )
 
         words = extract_words(raw)
@@ -383,7 +380,6 @@ async def assess_reading(
 
         return AssessmentResponse(
             student_id=student_id,
-            assessment_id=assessment_id,
             provider="azure_pronunciation_assessment",
             raw_alignment_path=raw_alignment_path,
             provider_scores=provider_scores,

@@ -74,7 +74,7 @@ uvicorn app:app --reload --host 0.0.0.0 --port 8000
 ## Demo Flow
 
 1. Open `http://localhost:8000/`.
-2. Enter student ID, assessment ID, reference text, and time limit.
+2. Select a demo student, then enter reference text and time limit.
 3. Choose either `Upload file` or `Record audio`.
 4. If recording, click `Start Recording`; recording auto-stops at the selected time limit.
 5. Click `Submit`.
@@ -91,7 +91,7 @@ Uploaded or browser-recorded non-WAV audio is converted server-side to WAV befor
 Raw Azure alignment payloads are written to:
 
 ```text
-outputs/{student_id}_{assessment_id}.json
+outputs/{student_id}_{timestamp}.json
 ```
 
 In the Docker container this path is ephemeral unless you mount a volume.
